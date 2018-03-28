@@ -1,0 +1,6 @@
+{
+    "files.autoSave": "afterDelay",
+    "editor.wordWrap": "on",
+    "go.gocodeAutoBuild": true,
+    "go.buildOnSave": "package"
+}

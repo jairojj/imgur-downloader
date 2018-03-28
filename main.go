@@ -1,21 +1,67 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
-import "github.com/jairojj/imgur-downloader/cmd"
+import (
+	"fmt"
+	"log"
+	"os"
+	"os/user"
+	"strings"
+	"sync"
+
+	"github.com/gocolly/colly"
+)
 
 func main() {
-	cmd.Execute()
+	if len(os.Args) < 2 {
+		log.Println("Missing url argument")
+		os.Exit(1)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(os.Args))
+
+	for _, link := range os.Args {
+		go func(link string) {
+			defer wg.Done()
+			Download(link)
+		}(link)
+	}
+
+	wg.Wait()
+
+	fmt.Println("Finished")
+}
+
+//Download imgur img
+func Download(url string) {
+	c := colly.NewCollector()
+
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	c.OnHTML("div.post-image img", func(e *colly.HTMLElement) {
+		img := e.Attr("src")
+
+		fmt.Println("Image found:", img)
+
+		c.Visit(img)
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		fmt.Println("Visiting:", r.URL.String())
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		if strings.Index(r.Headers.Get("Content-Type"), "image") > -1 {
+			err := r.Save(usr.HomeDir + "/Pictures/imgur/" + r.FileName())
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	c.Visit(url)
 }
