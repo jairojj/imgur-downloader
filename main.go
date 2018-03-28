@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"strings"
 	"sync"
 
@@ -36,12 +35,6 @@ func main() {
 func Download(url string) {
 	c := colly.NewCollector()
 
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-
 	c.OnHTML("div.post-image img", func(e *colly.HTMLElement) {
 		img := e.Attr("src")
 
@@ -56,7 +49,7 @@ func Download(url string) {
 
 	c.OnResponse(func(r *colly.Response) {
 		if strings.Index(r.Headers.Get("Content-Type"), "image") > -1 {
-			err := r.Save(usr.HomeDir + "/Pictures/imgur/" + r.FileName())
+			err := r.Save(r.FileName())
 			if err != nil {
 				panic(err)
 			}
